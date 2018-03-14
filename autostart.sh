@@ -11,92 +11,95 @@
 declare -a arr=('/home/XXX/package1' '/home/XXX/package2')
 
 
-function start(){
-    for cmd in ${arr[@]} ;do
-    if [ -d ${cmd} ]
-    then
-        cd ${cmd}
-        if [ -f ./startup.sh ]
-        then
-            if [ -x  ./startup.sh ]
-            then
-                ./startup.sh
-                echo "${cmd} 已启动 "
-            else
-                echo "[ERROR] : startup.sh 无可执行权限"
 
-            fi
-        elif  [ -f ./start.sh ]
+STARTCMD="startup.sh"
+STARTCMD1="start.sh"
+STOPCMD="shutdown.sh"
+STOPCMD1="stop.sh"
+
+function run(){
+    source /etc/profile
+    export BASH=`which bash`
+    if [ `whoami` = "XX" ]
+    then
+        echo "[INFO]: 用户为XX用户"
+        sleep 1
+    else
+        echo "[ERROR] :用户不为XX，请用XX用户!程序退出！"
+        return 1
+    fi
+    for dir in ${arr[@]} ;do
+        if [ -d ${dir} ]
         then
-            if [ -x  ./start.sh ]
+            cd ${dir}
+            if [ -f ${1} ]
             then
-                ./start.sh
-                echo "${cmd} 已启动 "
+                if [ -x ${1} ]
+                then
+                    ${BASH} ${1}
+                    echo "${dir} 下脚本已执行 "
+                    sleep 1
+                else
+                    echo "[ERROR] : ${1} 无可执行权限"
+                    return 1
+                fi
+            elif  [ -f ${2} ]
+            then
+                if [ -x  ${2} ]
+                then
+                    ${BASH} ${2}
+                    echo "${dir} 下脚本已执行 "
+                    sleep 1
+                else
+                    echo "[ERROR] : ${2} 无可执行权限"
+                    return 1
+                fi
             else
-                echo "[ERROR] : start.sh 无可执行权限"
+                echo "[ERROR] : 不存在脚本 ${2}或${1}"
+                return 1
             fi
         else
-            echo "[ERROR] : 不存在启动脚本 start.sh或startup.sh"
+            echo "[ERROR] : ${dir} 不存在这个路径"
+            return 1
         fi
-    else
-        echo "[ERROR] : ${cmd} 不存在这个路径"
-    fi
     done
 }
-
-
-function stop(){
-    for cmd in ${arr[@]} ;do
-    if [ -d ${cmd} ]
-    then
-        cd ${cmd}
-        if [ -f ./shutdown.sh ]
-        then
-            if [ -x  ./shutdown.sh ]
-            then
-                ./shutdown.sh
-                echo "${cmd} 已停止 "
-            else
-                echo "[ERROR] : shutdown.sh 无可执行权限"
-
-            fi
-        elif  [ -f ./stop.sh ]
-        then
-            if [ -x  ./stop.sh ]
-            then
-                ./stop.sh
-                echo "${cmd} 已停止 "
-            else
-                echo "[ERROR] : stop.sh 无可执行权限"
-            fi
-        else
-            echo "[ERROR] : 不存在启动脚本 stop.sh或shutdown.sh"
-        fi
-    else
-        echo "[ERROR] : ${cmd} 不存在这个路径"
-    fi
-    done
-}
-
 
 option="${1}"
 case ${option} in
     -start|start) echo "starting...."
-    start
+    run ${STARTCMD} ${STARTCMD1}
+    if [[ $? -ne 0 ]] ;
+    then
+        echo "[ERROR]: =======执行失败，脚本退出！======="
+        exit 1
+    fi
     ;;
     -stop|stop) echo "shutdown...."
-    stop
+    run ${STOPCMD} ${STOPCMD1}
+    if [[ $? -ne 0 ]] ;
+    then
+        echo "[ERROR]: =======执行失败，脚本退出！======="
+        exit 1
+    fi
     ;;
     -restart|restart) echo "shutdown...."
-    stop
+    run ${STOPCMD} ${STOPCMD1}
+    if [[ $? -ne 0 ]] ;
+    then
+        echo "[ERROR]: =======执行失败，脚本退出！======="
+        exit 1
+    fi
     echo "starting...."
-    start
+    run ${STARTCMD} ${STARTCMD1}
+        if [[ $? -ne 0 ]] ;
+    then
+        echo "[ERROR]: =======执行失败，脚本退出！======="
+        exit 1
+    fi
     ;;
    *)
       echo "`basename ${0}`:usage: [-start|start] | [-stop|stop] | [-restart|restart]"
       exit 1
       ;;
 esac
-
-
-
